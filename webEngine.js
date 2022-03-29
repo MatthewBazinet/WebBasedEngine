@@ -195,7 +195,6 @@ class GameObject{
   }
 }
 
-
 var cubeRotation = 0.0;
 var cube = new GameObject();
 main();
