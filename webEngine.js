@@ -191,11 +191,9 @@ class BoundingBox{
     this.minVert = minVert_;
     this.transform = transform_;
   }
-  SetSize(){
-  }
-  SetPosition(pos_){
-    this.pos = pos_;
-  }
+SetPosition(transform_){
+  this.transform = transform_;
+}
 
 }
 function Intersects(a,b){
@@ -279,7 +277,7 @@ class Camera {
 class GameObject{
 
   constructor(cubeRotation_, xPos_, yPos_, zPos_) {
-    this.bb = new BoundingBox([1,1,1],[-1,-1,-1],[xPos_,yPos_,zPos_]);
+    
     this.cubeRotation = cubeRotation_;
     this.xPos = xPos_;
     this.yPos = yPos_;
@@ -287,7 +285,7 @@ class GameObject{
       this.xVel = 0.0;
       this.yVel = 0.0;
       this.zVel = 0.0;
-      
+    this.bb = new BoundingBox([1.5,1.5,1.5],[-1.5,-1.5,-1.5],[this.xPos,this.yPos,this.zPos]); 
   }
 
   getXPos() { return this.xPos; }
@@ -317,7 +315,7 @@ class GameObject{
       this.xPos += this.xVel * deltaTime;
       this.yPos += this.yVel * deltaTime;
       this.zPos += this.zVel * deltaTime;
-
+      this.bb.SetPosition([this.xPos,this.yPos,this.zPos]);
     if(this.yPos > 0.0)
     {
         this.yPos -= 0.1;
@@ -349,9 +347,10 @@ class Enemy extends GameObject {
 
 }
 
-var cube = new GameObject(0.0, 0.0, 4.0, -6.0);
-var cube2 = new GameObject(0.0, 0.0, -4.0, -6.0);
-var enemy1 = new Enemy(0.0, 0.0, 4.0, -6.0);
+var cube = new GameObject(0.0, 4.0, 4.0, -6.0);
+var cube2 = new GameObject(0.0, 0.0, 0.0, -6.0);
+
+var enemy1 = new Enemy(0.0, 4.0, 4.0, -6.0);
 var camera = new Camera();
 var cameraPositionZ = -10.0;
 
@@ -574,14 +573,21 @@ function update(deltaTime)
 {
   // Update the rotation for the next draw
   cube.Update(deltaTime);
-  //cube2.Update(deltaTime);
+  cube2.Update(deltaTime);
   if(Intersects(cube.bb,cube2.bb)){
-    //cube.SetVelocity([-0.8,0.0,0.0]);
+    var xDif = cube.xPos - cube2.xPos;
+    var yDif = cube.yPos - cube2.yPos;
+    var zDif = cube.zPos - cube2.zPos;
+
+
+    cube2.setXVel(-xDif);
+    cube2.setYVel(-yDif);
+    cube2.setZVel(-zDif);
   }
   //cubeRotation += deltaTime;
   
 
-  cube.cubeRotation += deltaTime;
+  //cube.cubeRotation += deltaTime;
   enemy1.Update(deltaTime);
 
     document.addEventListener('keydown', onKeyDown, false);
@@ -672,7 +678,7 @@ function drawScene(gl, programInfo, deltaTime) {
               [0, 0, 1]);       // axis to rotate around (Z)
   mat4.rotate(modelViewMatrix2,  // destination matrix
               modelViewMatrix2,  // matrix to rotate
-              cube.getRotation() * 0.7,// amount to rotate in radians
+              cube2.getRotation() * 0.0,// amount to rotate in radians
               [0, 1, 0]);       // axis to rotate around (X)
 cube2.Render(gl, programInfo, camera.projectionMatrix, modelViewMatrix2,camera.viewMatrix);
   const modelMatrix = mat4.create();
