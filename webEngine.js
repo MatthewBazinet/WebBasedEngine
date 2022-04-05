@@ -256,6 +256,9 @@ class GameObject{
     this.xPos = xPos_;
     this.yPos = yPos_;
     this.zPos = zPos_;
+      this.xVel = 0.0;
+      this.yVel = 0.0;
+      this.zVel = 0.0;
   }
 
   getXPos() { return this.xPos; }
@@ -267,11 +270,25 @@ class GameObject{
   getZPos() { return this.zPos; }
   setZPos(zPos_) { this.zPos = zPos_; }
 
+
+    getXVel() { return this.xVel; }
+    setXVel(xVel_) { this.xVel = xVel_; }
+
+    getYVel() { return this.yVel; }
+    setYVel(yVel_) { this.yVel = yVel_; }
+
+    getZVel() { return this.zVel; }
+    setZVel(zVel_) { this.zVel = zVel_; }
+
   getRotation() { return this.cubeRotation; }
   setRotation(rotation_) { cubeRotation = rotation_; }
 
   Update(deltaTime)
   {
+      this.xPos += this.xVel * deltaTime;
+      this.yPos += this.yVel * deltaTime;
+      this.zPos += this.zVel * deltaTime;
+
     if(this.yPos > 0.0)
     {
         this.yPos -= 0.1;
@@ -283,7 +300,25 @@ class GameObject{
   }
 }
 
+class Enemy extends GameObject {
+
+    OnCreate() {
+        this.timeSinceVelUpdate = 0.0;
+    }
+
+    Update(deltaTime) {
+        super.Update(deltaTime);
+        this.timeSinceVelUpdate += deltaTime;
+        if (this.timeSinceVelUpdate > 2.0) {
+            this.xVel += (Math.random() - 0.5) * 10.0 * deltaTime;
+            this.zVel += (Math.random() - 0.5) * 10.0 * deltaTime;
+        }
+    }
+
+}
+
 var cube = new GameObject(0.0, 0.0, 4.0, -6.0);
+var enemy1 = new Enemy(0.0, 0.0, 4.0, -6.0);
 var camera = new Camera();
 var cameraPositionZ = -10.0;
 main();
@@ -420,6 +455,10 @@ function InitWebGl(object) {
  camera.OnCreate(gl);
  cube.mesh = new Mesh(gl);
  cube.mesh.CreateBuffers(gl);
+
+    enemy1.mesh = new Mesh(gl);
+    enemy1.mesh.CreateBuffers(gl);
+    enemy1.OnCreate();
   // Vertex shader program
 
   const vsSource = `
@@ -497,36 +536,64 @@ function update(deltaTime)
 
   cube.Update(deltaTime);
   cube.cubeRotation += deltaTime;
+  enemy1.Update(deltaTime);
 
-  document.addEventListener('keydown', onKeyDown, false);
+    document.addEventListener('keydown', onKeyDown, false);
+    document.addEventListener('keyup', onKeyUp, false);
 
   function onKeyDown(event)
   {
         switch(event.key)
         {
         case 'w':
-        cube.setZPos(cube.getZPos() - 0.001);
+        cube.setZVel(-3);
         break;
         case 'a':
-        cube.setXPos(cube.getXPos() - 0.001);
+        cube.setXVel(-3);
         break;
         case 's':
-        cube.setZPos(cube.getZPos() + 0.001);
+        cube.setZVel(3);
         break;
         case 'd':
-        cube.setXPos(cube.getXPos() + 0.001);
+        cube.setXVel(3);
         break;
         case ' ':
         cube.setYPos(cube.getYPos() + 0.001);
         break;
         }
-  }
-
-    cameraPositionZ += 1 * deltaTime;
-    if (cameraPositionZ > -1.0) {
-        cameraPositionZ = -10.0;
     }
-    camera.SetPosition(0, 0, cameraPositionZ);
+    ;
+
+    function onKeyUp(event) {
+        switch (event.key) {
+            case 'w':
+                if (cube.getZVel() < 0) {
+                    cube.setZVel(0);
+                }
+                break;
+            case 'a':
+                if (cube.getXVel() < 0) {
+                    cube.setXVel(0);
+                }
+                break;
+            case 's':
+                if (cube.getZVel() > 0) {
+                    cube.setZVel(0);
+                }
+                break;
+            case 'd':
+                if (cube.getXVel() > 0) {
+                    cube.setXVel(0);
+                }
+                break;
+        }
+    }
+    ;
+    //cameraPositionZ += 1 * deltaTime;
+    //if (cameraPositionZ > -1.0) {
+     //   cameraPositionZ = -10.0;
+    //}
+    camera.SetPosition(-cube.getXPos(), -cube.getYPos(), -cube.getZPos() - 10);
 }
 
 //
@@ -564,6 +631,25 @@ function drawScene(gl, programInfo, deltaTime) {
               [0, 1, 0]);       // axis to rotate around (X)
 
     cube.Render(gl, programInfo, camera.projectionMatrix, modelMatrix, camera.viewMatrix);
+
+    const enemyModelMatrix = mat4.create();
+
+    // Now move the drawing position a bit to where we want to
+    // start drawing the square.
+
+    mat4.translate(enemyModelMatrix,     // destination matrix
+        enemyModelMatrix,     // matrix to translate
+        [enemy1.getXPos(), enemy1.getYPos(), enemy1.getZPos()]);  // amount to translate
+    mat4.rotate(enemyModelMatrix,  // destination matrix
+        enemyModelMatrix,  // matrix to rotate
+        enemy1.getRotation(),     // amount to rotate in radians
+        [0, 0, 1]);       // axis to rotate around (Z)
+    mat4.rotate(enemyModelMatrix,  // destination matrix
+        enemyModelMatrix,  // matrix to rotate
+        enemy1.getRotation() * .7,// amount to rotate in radians
+        [0, 1, 0]);       // axis to rotate around (X)
+
+    enemy1.Render(gl, programInfo, camera.projectionMatrix, enemyModelMatrix, camera.viewMatrix);
 }
 
 //
