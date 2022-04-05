@@ -4,7 +4,7 @@
 class Mesh{
 constructor(gl){
 }
-  CreateBuffers(gl){
+  CreateBuffers(gl, object){
  this.vertexBuffer = gl.createBuffer();
 
   // Select the positionBuffer as the one to apply buffer
@@ -51,6 +51,8 @@ constructor(gl){
     -1.0,  1.0,  1.0,
     -1.0,  1.0, -1.0,
   ];
+
+  
 
   // Now pass the list of positions into WebGL to build the
   // shape. We do this by creating a Float32Array from the
@@ -181,13 +183,32 @@ constructor(gl){
 }
 
 class GameObject{
-  constructor() {
-    
+
+  constructor(cubeRotation_, xPos_, yPos_, zPos_) {
+    this.cubeRotation = cubeRotation_;
+    this.xPos = xPos_;
+    this.yPos = yPos_;
+    this.zPos = zPos_;
   }
+
+  getXPos() { return this.xPos; }
+  setXPos(xPos_) { this.xPos = xPos_; }
+
+  getYPos() { return this.yPos; }
+  setYPos(yPos_) { this.yPos = yPos_; }
+
+  getZPos() { return this.zPos; }
+  setZPos(zPos_) { this.zPos = zPos_; }
+
+  getRotation() { return this.cubeRotation; }
+  setRotation(rotation_) { cubeRotation = rotation_; }
 
   Update(deltaTime)
   {
-
+    if(this.yPos > 0.0)
+    {
+        this.yPos -= 0.1;
+    }
   }
   Render(gl, programInfo, projectionMatrix , modelViewMatrix)
   {
@@ -195,23 +216,25 @@ class GameObject{
   }
 }
 
-
-var cubeRotation = 0.0;
-var cube = new GameObject();
+var cube = new GameObject(0.0, 0.0, 4.0, -6.0);
 main();
 
 //
 // Start here
 //
 
-function main()
+async function main()
 {
-    renderOBJ();
-    //InitWebGl();
+    const response = await fetch('https://webglfundamentals.org/webgl/resources/models/cube/cube.obj');  
+    const text = await response.text();
+
+    //renderOBJ(text);
+    InitWebGl(text);
 }
 
-async function renderOBJ()
+function renderOBJ(object)
 {
+    document.addEventListener('keydown', onKeyDown, false);
     const canvas = document.querySelector('#glcanvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
@@ -254,9 +277,7 @@ async function renderOBJ()
     `;
 
     const meshProgramInfo = webglUtils.createProgramInfo(gl, [vs, fs]);
-    const response = await fetch('https://webglfundamentals.org/webgl/resources/models/cube/cube.obj');  
-    const text = await response.text();
-    const data = parseOBJ(text);
+    const data = parseOBJ(object);;
 
     const bufferInfo = webglUtils.createBufferInfoFromArrays(gl, data);
 
@@ -316,7 +337,7 @@ async function renderOBJ()
   requestAnimationFrame(render);
 }
 
-function InitWebGl() {
+function InitWebGl(object) {
   const canvas = document.querySelector('#glcanvas');
   const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
@@ -327,8 +348,6 @@ function InitWebGl() {
     return;
   }
 
- cube.mesh = new Mesh(gl);
- cube.mesh.CreateBuffers(gl);
   // Vertex shader program
 
   const vsSource = `
@@ -351,6 +370,11 @@ function InitWebGl() {
       gl_FragColor = vColor;
     }
   `;
+
+  const data = parseOBJ(object);
+
+  cube.mesh = new Mesh(gl);
+  cube.mesh.CreateBuffers(gl, object);
 
   // Initialize a shader program; this is where all the lighting
   // for the vertices and so forth is established.
@@ -398,7 +422,33 @@ function update(deltaTime)
   // Update the rotation for the next draw
 
   cube.Update(deltaTime);
-  cubeRotation += deltaTime;
+  cube.cubeRotation += deltaTime;
+
+  document.addEventListener('keydown', onKeyDown, false);
+
+  function onKeyDown(event)
+  {
+        switch(event.key)
+        {
+        case 'w':
+        cube.setZPos(cube.getZPos() - 0.001);
+        break;
+        case 'a':
+        cube.setXPos(cube.getXPos() - 0.001);
+        break;
+        case 's':
+        cube.setZPos(cube.getZPos() + 0.001);
+        break;
+        case 'd':
+        cube.setXPos(cube.getXPos() + 0.001);
+        break;
+        case ' ':
+        cube.setYPos(cube.getYPos() + 0.001);
+        break;
+        }
+  }
+
+  //xPos += deltaTime;
 }
 
 //
@@ -444,14 +494,14 @@ function drawScene(gl, programInfo, deltaTime) {
 
   mat4.translate(modelViewMatrix,     // destination matrix
                  modelViewMatrix,     // matrix to translate
-                 [-0.0, 0.0, -6.0]);  // amount to translate
+                 [cube.getXPos(), cube.getYPos(), cube.getZPos()]);  // amount to translate
   mat4.rotate(modelViewMatrix,  // destination matrix
               modelViewMatrix,  // matrix to rotate
-              cubeRotation,     // amount to rotate in radians
+              cube.getRotation(),     // amount to rotate in radians
               [0, 0, 1]);       // axis to rotate around (Z)
   mat4.rotate(modelViewMatrix,  // destination matrix
               modelViewMatrix,  // matrix to rotate
-              cubeRotation * .7,// amount to rotate in radians
+              cube.getRotation() * .7,// amount to rotate in radians
               [0, 1, 0]);       // axis to rotate around (X)
 
 cube.Render(gl, programInfo, projectionMatrix, modelViewMatrix);
