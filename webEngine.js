@@ -112,7 +112,7 @@ constructor(gl){
       new Uint16Array(this.indices), gl.STATIC_DRAW);
 }
 
-  Render(gl, programInfo, projectionMatrix , modelViewMatrix)
+  Render(gl, programInfo, projectionMatrix , modelMatrix, viewMatrix)
 {
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute
@@ -168,9 +168,13 @@ constructor(gl){
       false,
       projectionMatrix);
   gl.uniformMatrix4fv(
-      programInfo.uniformLocations.modelViewMatrix,
+      programInfo.uniformLocations.viewMatrix,
       false,
-      modelViewMatrix);
+      viewMatrix);
+  gl.uniformMatrix4fv(
+      programInfo.uniformLocations.modelMatrix,
+      false,
+      modelMatrix);
 
   {
     const vertexCount = 36;
@@ -179,6 +183,69 @@ constructor(gl){
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
 }
+
+}
+
+class Camera {
+    constructor() {
+
+    }
+
+    UpdateCamera() {
+        this.viewMatrix = mat4.create();
+        mat4.multiply(this.viewMatrix, this.rotate, this.translate);
+        this.viewProjectionMatrix = mat4.create();
+        mat4.multiply(this.viewProjectionMatrix, this.projectionMatrix, this.viewMatrix);
+    }
+
+    OnCreate(gl)
+    {
+        // Create a perspective matrix, a special matrix that is
+        // used to simulate the distortion of perspective in a camera.
+        // Our field of view is 45 degrees, with a width/height
+        // ratio that matches the display size of the canvas
+        // and we only want to see objects between 0.1 units
+        // and 100 units away from the camera.
+
+        const fieldOfView = 45 * Math.PI / 180;   // in radians
+        const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+        const zNear = 0.1;
+        const zFar = 100.0;
+        this.projectionMatrix = mat4.create();
+
+        // note: glmatrix.js always has the first argument
+        // as the destination to receive the result.
+        mat4.perspective(this.projectionMatrix,
+            fieldOfView,
+            aspect,
+            zNear,
+            zFar);
+
+        this.rotate = mat4.create();
+        mat4.rotate(this.rotate, this.rotate, 0.0, [0.0, 1.0, 0.0]);
+        this.translate = mat4.create();
+        mat4.translate(this.translate, this.translate, [0.0, 0.0, -10.0]);
+        this.UpdateCamera()
+    }
+
+    SetPosition(X, Y, Z)
+    {
+        this.translate = mat4.create();
+        mat4.translate(this.translate, this.translate, [X, Y, Z]);
+        this.UpdateCamera();
+    }
+
+    SetRotation(X, Y, Z, Theta)
+    {
+        this.rotate = mat4.create();
+        mat4.rotate(this.rotate, this.rotate, Theta, [X, Y, Z]);
+        this.UpdateCamera();
+    }
+
+    Translate(X, Y, Z)
+    {
+        mat4.translate(this.translate, this.translate, [X, Y, Z]);
+    }
 
 }
 
@@ -210,13 +277,20 @@ class GameObject{
         this.yPos -= 0.1;
     }
   }
-  Render(gl, programInfo, projectionMatrix , modelViewMatrix)
+  Render(gl, programInfo, projectionMatrix , modelMatrix, viewMatrix)
   {
-    this.mesh.Render(gl, programInfo, projectionMatrix , modelViewMatrix);
+    this.mesh.Render(gl, programInfo, projectionMatrix , modelMatrix, viewMatrix);
   }
 }
 
+<<<<<<< HEAD
 var cube = new GameObject(0.0, 0.0, 4.0, -6.0);
+=======
+var cubeRotation = 0.0;
+var cube = new GameObject();
+var camera = new Camera();
+var cameraPositionZ = -10.0;
+>>>>>>> d80c99e2498d8bd9ba18e1a4891c26d304d650a4
 main();
 
 //
@@ -225,11 +299,16 @@ main();
 
 async function main()
 {
+<<<<<<< HEAD
     const response = await fetch('https://webglfundamentals.org/webgl/resources/models/cube/cube.obj');  
     const text = await response.text();
 
     //renderOBJ(text);
     InitWebGl(text);
+=======
+    //renderOBJ();
+    InitWebGl();
+>>>>>>> d80c99e2498d8bd9ba18e1a4891c26d304d650a4
 }
 
 function renderOBJ(object)
@@ -348,16 +427,23 @@ function InitWebGl(object) {
     return;
   }
 
+<<<<<<< HEAD
+=======
+ camera.OnCreate(gl);
+ cube.mesh = new Mesh(gl);
+ cube.mesh.CreateBuffers(gl);
+>>>>>>> d80c99e2498d8bd9ba18e1a4891c26d304d650a4
   // Vertex shader program
 
   const vsSource = `
     attribute vec4 aVertexPosition;
     attribute vec4 aVertexColor;
-    uniform mat4 uModelViewMatrix;
+    uniform mat4 uModelMatrix;
+    uniform mat4 uViewMatrix;
     uniform mat4 uProjectionMatrix;
     varying lowp vec4 vColor;
     void main(void) {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * aVertexPosition;
       vColor = aVertexColor;
     }
   `;
@@ -392,7 +478,8 @@ function InitWebGl(object) {
     },
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+        modelMatrix: gl.getUniformLocation(shaderProgram, 'uModelMatrix'),
+        viewMatrix: gl.getUniformLocation(shaderProgram, 'uViewMatrix'),
     }
   };
 
@@ -422,6 +509,7 @@ function update(deltaTime)
   // Update the rotation for the next draw
 
   cube.Update(deltaTime);
+<<<<<<< HEAD
   cube.cubeRotation += deltaTime;
 
   document.addEventListener('keydown', onKeyDown, false);
@@ -449,6 +537,14 @@ function update(deltaTime)
   }
 
   //xPos += deltaTime;
+=======
+    cubeRotation += deltaTime;
+    cameraPositionZ += 1 * deltaTime;
+    if (cameraPositionZ > -1.0) {
+        cameraPositionZ = -10.0;
+    }
+    camera.SetPosition(0, 0, cameraPositionZ);
+>>>>>>> d80c99e2498d8bd9ba18e1a4891c26d304d650a4
 }
 
 //
@@ -464,34 +560,16 @@ function drawScene(gl, programInfo, deltaTime) {
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  // Create a perspective matrix, a special matrix that is
-  // used to simulate the distortion of perspective in a camera.
-  // Our field of view is 45 degrees, with a width/height
-  // ratio that matches the display size of the canvas
-  // and we only want to see objects between 0.1 units
-  // and 100 units away from the camera.
 
-  const fieldOfView = 45 * Math.PI / 180;   // in radians
-  const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-  const zNear = 0.1;
-  const zFar = 100.0;
-  const projectionMatrix = mat4.create();
-
-  // note: glmatrix.js always has the first argument
-  // as the destination to receive the result.
-  mat4.perspective(projectionMatrix,
-                   fieldOfView,
-                   aspect,
-                   zNear,
-                   zFar);
 
   // Set the drawing position to the "identity" point, which is
   // the center of the scene.
-  const modelViewMatrix = mat4.create();
+  const modelMatrix = mat4.create();
 
   // Now move the drawing position a bit to where we want to
   // start drawing the square.
 
+<<<<<<< HEAD
   mat4.translate(modelViewMatrix,     // destination matrix
                  modelViewMatrix,     // matrix to translate
                  [cube.getXPos(), cube.getYPos(), cube.getZPos()]);  // amount to translate
@@ -502,9 +580,21 @@ function drawScene(gl, programInfo, deltaTime) {
   mat4.rotate(modelViewMatrix,  // destination matrix
               modelViewMatrix,  // matrix to rotate
               cube.getRotation() * .7,// amount to rotate in radians
+=======
+  mat4.translate(modelMatrix,     // destination matrix
+                 modelMatrix,     // matrix to translate
+                 [-0.0, 0.0, -6.0]);  // amount to translate
+  mat4.rotate(modelMatrix,  // destination matrix
+              modelMatrix,  // matrix to rotate
+              cubeRotation,     // amount to rotate in radians
+              [0, 0, 1]);       // axis to rotate around (Z)
+  mat4.rotate(modelMatrix,  // destination matrix
+              modelMatrix,  // matrix to rotate
+              cubeRotation * .7,// amount to rotate in radians
+>>>>>>> d80c99e2498d8bd9ba18e1a4891c26d304d650a4
               [0, 1, 0]);       // axis to rotate around (X)
 
-cube.Render(gl, programInfo, projectionMatrix, modelViewMatrix);
+    cube.Render(gl, programInfo, camera.projectionMatrix, modelMatrix, camera.viewMatrix);
 }
 
 //
