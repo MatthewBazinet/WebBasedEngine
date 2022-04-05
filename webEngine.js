@@ -179,15 +179,59 @@ constructor(gl){
 }
 
 }
+class BoundingBox{
+  constructor(maxVert_,minVert_,transform_){
+    this.maxVert = maxVert_;
+    this.minVert = minVert_;
+    this.transform = transform_;
+  }
+  SetSize(){
 
-class GameObject{
-  constructor() {
-    
+  }
+  SetPosition(pos_){
+    this.pos = pos_;
   }
 
+}
+function Intersects(a,b){
+  var minCornerA = GetTransformedPoint(a.minVert,a.transform);
+  var maxCornerA = GetTransformedPoint(a.maxVert,a.transform);
+
+  var minCornerB = GetTransformedPoint(b.minVert,b.transform);
+  var maxCornerB = GetTransformedPoint(b.maxVert,b.transform);
+
+  return (minCornerA[0] <= maxCornerB[0] && maxCornerA[0] >= minCornerB[0]) &&
+  (minCornerA[1] <= maxCornerB[1] && maxCornerA[1] >= minCornerB[1]) &&
+  (minCornerA[2] <= maxCornerB[2] && maxCornerA[2] >= minCornerB[2]);
+}
+function GetTransformedPoint(point_,transform_){
+  return [transform_[0]+ point_[0],transform_[1]+ point_[1],transform_[2]+ point_[2]] ;
+}
+
+class GameObject{
+  constructor(pos_) {
+    this.pos = pos_;
+    this.vel = [0.0,0.0,0.0];
+    this.accel = [0.0,0.0,0.0];
+    this.bb = new BoundingBox([1,1,1],[-1,-1,-1],this.pos);
+  }
+  SetVelocity(vel_){
+    this.vel = vel_;
+    console.log(this.vel);
+  }
+  GetVelocity(){
+    return this.vel;
+  }
   Update(deltaTime)
   {
-
+    this.pos[0] += this.vel[0] * deltaTime + 0.5 * this.accel[0] * deltaTime * deltaTime;
+    this.pos[1] += this.vel[1] * deltaTime + 0.5 * this.accel[1] * deltaTime * deltaTime;
+    this.pos[2] += this.vel[2] * deltaTime + 0.5 * this.accel[2] * deltaTime * deltaTime;
+    
+    
+    this.vel[0] = this.vel[0] + this.accel[0] * deltaTime;
+    this.vel[1] = this.vel[1] + this.accel[1] * deltaTime;
+    this.vel[2] = this.vel[2] + this.accel[2] * deltaTime;
   }
   Render(gl, programInfo, projectionMatrix , modelViewMatrix)
   {
@@ -195,9 +239,11 @@ class GameObject{
   }
 }
 
-
 var cubeRotation = 0.0;
-var cube = new GameObject();
+var cube = new GameObject([-3,0,-6]);
+
+var cube2 = new GameObject([3, 0, -6]);
+
 main();
 
 //
@@ -206,8 +252,8 @@ main();
 
 function main()
 {
-    renderOBJ();
-    //InitWebGl();
+    //renderOBJ();
+    InitWebGl();
 }
 
 async function renderOBJ()
@@ -329,6 +375,8 @@ function InitWebGl() {
 
  cube.mesh = new Mesh(gl);
  cube.mesh.CreateBuffers(gl);
+ cube2.mesh = new Mesh(gl);
+ cube2.mesh.CreateBuffers(gl);
   // Vertex shader program
 
   const vsSource = `
@@ -396,9 +444,15 @@ requestAnimationFrame(gameLoop);
 function update(deltaTime)
 {
   // Update the rotation for the next draw
-
   cube.Update(deltaTime);
-  cubeRotation += deltaTime;
+  //cube2.Update(deltaTime);
+  if(Intersects(cube.bb,cube2.bb)){
+    cube.SetVelocity([-0.8,0.0,0.0]);
+  }else{
+    cube.SetVelocity([0.8,0.0,0.0]);
+  }
+  //cubeRotation += deltaTime;
+  
 }
 
 //
@@ -438,23 +492,35 @@ function drawScene(gl, programInfo, deltaTime) {
   // Set the drawing position to the "identity" point, which is
   // the center of the scene.
   const modelViewMatrix = mat4.create();
-
+  const modelViewMatrix2 = mat4.create();
   // Now move the drawing position a bit to where we want to
   // start drawing the square.
-
+    
   mat4.translate(modelViewMatrix,     // destination matrix
                  modelViewMatrix,     // matrix to translate
-                 [-0.0, 0.0, -6.0]);  // amount to translate
+                 cube.pos);  // amount to translate
   mat4.rotate(modelViewMatrix,  // destination matrix
               modelViewMatrix,  // matrix to rotate
               cubeRotation,     // amount to rotate in radians
               [0, 0, 1]);       // axis to rotate around (Z)
   mat4.rotate(modelViewMatrix,  // destination matrix
               modelViewMatrix,  // matrix to rotate
-              cubeRotation * .7,// amount to rotate in radians
+              cubeRotation * 0.7,// amount to rotate in radians
               [0, 1, 0]);       // axis to rotate around (X)
 
 cube.Render(gl, programInfo, projectionMatrix, modelViewMatrix);
+  mat4.translate(modelViewMatrix2,     // destination matrix
+              modelViewMatrix2,     // matrix to translate
+              cube2.pos);  // amount to translate
+  mat4.rotate(modelViewMatrix2,  // destination matrix
+              modelViewMatrix2,  // matrix to rotate
+              cubeRotation,     // amount to rotate in radians
+              [0, 0, 1]);       // axis to rotate around (Z)
+  mat4.rotate(modelViewMatrix2,  // destination matrix
+              modelViewMatrix2,  // matrix to rotate
+              cubeRotation * 0.7,// amount to rotate in radians
+              [0, 1, 0]);       // axis to rotate around (X)
+cube2.Render(gl, programInfo, projectionMatrix, modelViewMatrix2);
 }
 
 //
@@ -497,7 +563,7 @@ function loadShader(gl, type, source) {
   gl.compileShader(shader);
 
   // See if it compiled successfully
-
+  
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     alert('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
     gl.deleteShader(shader);
@@ -598,6 +664,7 @@ function parseOBJ(text) {
     position: webglVertexData[0],
     texcoord: webglVertexData[1],
     normal: webglVertexData[2],
-  };
+    };
+    
 }
 
