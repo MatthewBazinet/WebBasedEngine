@@ -285,7 +285,7 @@ class GameObject{
       this.xVel = 0.0;
       this.yVel = 0.0;
       this.zVel = 0.0;
-    this.bb = new BoundingBox([1.5,1.5,1.5],[-1.5,-1.5,-1.5],[this.xPos,this.yPos,this.zPos]); 
+    this.bb = new BoundingBox([1,1,1],[-1,-1,-1],[this.xPos,this.yPos,this.zPos]); 
   }
 
   getXPos() { return this.xPos; }
@@ -348,7 +348,7 @@ class Enemy extends GameObject {
 }
 
 var cube = new GameObject(0.0, 4.0, 4.0, -6.0);
-var cube2 = new GameObject(0.0, 0.0, 0.0, -6.0);
+var cube2 = new GameObject(0.0, 0.0, 4.0, -6.0);
 
 var enemy1 = new Enemy(0.0, 4.0, 4.0, -6.0);
 var camera = new Camera();
@@ -574,16 +574,26 @@ function update(deltaTime)
   // Update the rotation for the next draw
   cube.Update(deltaTime);
   cube2.Update(deltaTime);
-  if(Intersects(cube.bb,cube2.bb)){
-    var xDif = cube.xPos - cube2.xPos;
-    var yDif = cube.yPos - cube2.yPos;
-    var zDif = cube.zPos - cube2.zPos;
+    if (Intersects(cube.bb, cube2.bb)) {
+       /* var xDif = cube.xPos - cube2.xPos;
+        var yDif = cube.yPos - cube2.yPos;
+        var zDif = cube.zPos - cube2.zPos;
 
 
-    cube2.setXVel(-xDif);
-    cube2.setYVel(-yDif);
-    cube2.setZVel(-zDif);
-  }
+        cube2.setXVel(-xDif);
+        cube2.setYVel(-yDif);
+        cube2.setZVel(-zDif);
+        */
+
+        cube2.setXVel(cube.xVel);
+        cube2.setYVel(cube.yVel);
+        cube2.setZVel(cube.zVel);
+    }
+    else {
+        cube2.setXVel(0);
+        cube2.setYVel(0);
+        cube2.setZVel(0);
+    }
   //cubeRotation += deltaTime;
   
 
