@@ -4,7 +4,7 @@
 class Mesh{
 constructor(gl){
 }
-  CreateBuffers(gl){
+  CreateBuffers(gl, object){
  this.vertexBuffer = gl.createBuffer();
 
   // Select the positionBuffer as the one to apply buffer
@@ -51,6 +51,8 @@ constructor(gl){
     -1.0,  1.0,  1.0,
     -1.0,  1.0, -1.0,
   ];
+
+  
 
   // Now pass the list of positions into WebGL to build the
   // shape. We do this by creating a Float32Array from the
@@ -110,7 +112,7 @@ constructor(gl){
       new Uint16Array(this.indices), gl.STATIC_DRAW);
 }
 
-  Render(gl, programInfo, projectionMatrix , modelViewMatrix)
+  Render(gl, programInfo, projectionMatrix , modelMatrix, viewMatrix)
 {
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute
@@ -166,9 +168,13 @@ constructor(gl){
       false,
       projectionMatrix);
   gl.uniformMatrix4fv(
-      programInfo.uniformLocations.modelViewMatrix,
+      programInfo.uniformLocations.viewMatrix,
       false,
-      modelViewMatrix);
+      viewMatrix);
+  gl.uniformMatrix4fv(
+      programInfo.uniformLocations.modelMatrix,
+      false,
+      modelMatrix);
 
   {
     const vertexCount = 36;
@@ -186,7 +192,6 @@ class BoundingBox{
     this.transform = transform_;
   }
   SetSize(){
-
   }
   SetPosition(pos_){
     this.pos = pos_;
@@ -208,41 +213,147 @@ function GetTransformedPoint(point_,transform_){
   return [transform_[0]+ point_[0],transform_[1]+ point_[1],transform_[2]+ point_[2]] ;
 }
 
+class Camera {
+    constructor() {
+
+    }
+
+    UpdateCamera() {
+        this.viewMatrix = mat4.create();
+        mat4.multiply(this.viewMatrix, this.rotate, this.translate);
+        this.viewProjectionMatrix = mat4.create();
+        mat4.multiply(this.viewProjectionMatrix, this.projectionMatrix, this.viewMatrix);
+    }
+
+    OnCreate(gl)
+    {
+        // Create a perspective matrix, a special matrix that is
+        // used to simulate the distortion of perspective in a camera.
+        // Our field of view is 45 degrees, with a width/height
+        // ratio that matches the display size of the canvas
+        // and we only want to see objects between 0.1 units
+        // and 100 units away from the camera.
+
+        const fieldOfView = 45 * Math.PI / 180;   // in radians
+        const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+        const zNear = 0.1;
+        const zFar = 100.0;
+        this.projectionMatrix = mat4.create();
+
+        // note: glmatrix.js always has the first argument
+        // as the destination to receive the result.
+        mat4.perspective(this.projectionMatrix,
+            fieldOfView,
+            aspect,
+            zNear,
+            zFar);
+
+        this.rotate = mat4.create();
+        mat4.rotate(this.rotate, this.rotate, 0.0, [0.0, 1.0, 0.0]);
+        this.translate = mat4.create();
+        mat4.translate(this.translate, this.translate, [0.0, 0.0, -10.0]);
+        this.UpdateCamera()
+    }
+
+    SetPosition(X, Y, Z)
+    {
+        this.translate = mat4.create();
+        mat4.translate(this.translate, this.translate, [X, Y, Z]);
+        this.UpdateCamera();
+    }
+
+    SetRotation(X, Y, Z, Theta)
+    {
+        this.rotate = mat4.create();
+        mat4.rotate(this.rotate, this.rotate, Theta, [X, Y, Z]);
+        this.UpdateCamera();
+    }
+
+    Translate(X, Y, Z)
+    {
+        mat4.translate(this.translate, this.translate, [X, Y, Z]);
+    }
+
+}
+
 class GameObject{
-  constructor(pos_) {
-    this.pos = pos_;
-    this.vel = [0.0,0.0,0.0];
-    this.accel = [0.0,0.0,0.0];
-    this.bb = new BoundingBox([1,1,1],[-1,-1,-1],this.pos);
+
+  constructor(cubeRotation_, xPos_, yPos_, zPos_) {
+    this.bb = new BoundingBox([1,1,1],[-1,-1,-1],[xPos_,yPos_,zPos_]);
+    this.cubeRotation = cubeRotation_;
+    this.xPos = xPos_;
+    this.yPos = yPos_;
+    this.zPos = zPos_;
+      this.xVel = 0.0;
+      this.yVel = 0.0;
+      this.zVel = 0.0;
+      
   }
-  SetVelocity(vel_){
-    this.vel = vel_;
-    console.log(this.vel);
-  }
-  GetVelocity(){
-    return this.vel;
-  }
+
+  getXPos() { return this.xPos; }
+  setXPos(xPos_) { this.xPos = xPos_; }
+
+  getYPos() { return this.yPos; }
+  setYPos(yPos_) { this.yPos = yPos_; }
+
+  getZPos() { return this.zPos; }
+  setZPos(zPos_) { this.zPos = zPos_; }
+
+
+    getXVel() { return this.xVel; }
+    setXVel(xVel_) { this.xVel = xVel_; }
+
+    getYVel() { return this.yVel; }
+    setYVel(yVel_) { this.yVel = yVel_; }
+
+    getZVel() { return this.zVel; }
+    setZVel(zVel_) { this.zVel = zVel_; }
+
+  getRotation() { return this.cubeRotation; }
+  setRotation(rotation_) { cubeRotation = rotation_; }
+
   Update(deltaTime)
   {
-    this.pos[0] += this.vel[0] * deltaTime + 0.5 * this.accel[0] * deltaTime * deltaTime;
-    this.pos[1] += this.vel[1] * deltaTime + 0.5 * this.accel[1] * deltaTime * deltaTime;
-    this.pos[2] += this.vel[2] * deltaTime + 0.5 * this.accel[2] * deltaTime * deltaTime;
-    
-    
-    this.vel[0] = this.vel[0] + this.accel[0] * deltaTime;
-    this.vel[1] = this.vel[1] + this.accel[1] * deltaTime;
-    this.vel[2] = this.vel[2] + this.accel[2] * deltaTime;
+      this.xPos += this.xVel * deltaTime;
+      this.yPos += this.yVel * deltaTime;
+      this.zPos += this.zVel * deltaTime;
+
+    if(this.yPos > 0.0)
+    {
+        this.yPos -= 0.1;
+    }
   }
-  Render(gl, programInfo, projectionMatrix , modelViewMatrix)
+  Render(gl, programInfo, projectionMatrix , modelMatrix, viewMatrix)
   {
-    this.mesh.Render(gl, programInfo, projectionMatrix , modelViewMatrix);
+    this.mesh.Render(gl, programInfo, projectionMatrix , modelMatrix, viewMatrix);
   }
 }
 
 var cubeRotation = 0.0;
-var cube = new GameObject([-3,0,-6]);
 
-var cube2 = new GameObject([3, 0, -6]);
+
+class Enemy extends GameObject {
+
+    OnCreate() {
+        this.timeSinceVelUpdate = 0.0;
+    }
+
+    Update(deltaTime) {
+        super.Update(deltaTime);
+        this.timeSinceVelUpdate += deltaTime;
+        if (this.timeSinceVelUpdate > 2.0) {
+            this.xVel += (Math.random() - 0.5) * 10.0 * deltaTime;
+            this.zVel += (Math.random() - 0.5) * 10.0 * deltaTime;
+        }
+    }
+
+}
+
+var cube = new GameObject(0.0, 0.0, 4.0, -6.0);
+var cube2 = new GameObject(0.0, 0.0, -4.0, -6.0);
+var enemy1 = new Enemy(0.0, 0.0, 4.0, -6.0);
+var camera = new Camera();
+var cameraPositionZ = -10.0;
 
 main();
 
@@ -250,14 +361,19 @@ main();
 // Start here
 //
 
-function main()
+async function main()
 {
-    //renderOBJ();
-    InitWebGl();
+
+    const response = await fetch('https://webglfundamentals.org/webgl/resources/models/cube/cube.obj');  
+    const text = await response.text();
+
+    //renderOBJ(text);
+    InitWebGl(text);
 }
 
-async function renderOBJ()
+function renderOBJ(object)
 {
+    document.addEventListener('keydown', onKeyDown, false);
     const canvas = document.querySelector('#glcanvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
@@ -300,9 +416,7 @@ async function renderOBJ()
     `;
 
     const meshProgramInfo = webglUtils.createProgramInfo(gl, [vs, fs]);
-    const response = await fetch('https://webglfundamentals.org/webgl/resources/models/cube/cube.obj');  
-    const text = await response.text();
-    const data = parseOBJ(text);
+    const data = parseOBJ(object);;
 
     const bufferInfo = webglUtils.createBufferInfoFromArrays(gl, data);
 
@@ -362,7 +476,7 @@ async function renderOBJ()
   requestAnimationFrame(render);
 }
 
-function InitWebGl() {
+function InitWebGl(object) {
   const canvas = document.querySelector('#glcanvas');
   const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
@@ -373,20 +487,29 @@ function InitWebGl() {
     return;
   }
 
+ camera.OnCreate(gl);
  cube.mesh = new Mesh(gl);
  cube.mesh.CreateBuffers(gl);
+
  cube2.mesh = new Mesh(gl);
  cube2.mesh.CreateBuffers(gl);
+
+
+    enemy1.mesh = new Mesh(gl);
+    enemy1.mesh.CreateBuffers(gl);
+    enemy1.OnCreate();
+
   // Vertex shader program
 
   const vsSource = `
     attribute vec4 aVertexPosition;
     attribute vec4 aVertexColor;
-    uniform mat4 uModelViewMatrix;
+    uniform mat4 uModelMatrix;
+    uniform mat4 uViewMatrix;
     uniform mat4 uProjectionMatrix;
     varying lowp vec4 vColor;
     void main(void) {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * aVertexPosition;
       vColor = aVertexColor;
     }
   `;
@@ -399,6 +522,11 @@ function InitWebGl() {
       gl_FragColor = vColor;
     }
   `;
+
+  const data = parseOBJ(object);
+
+  cube.mesh = new Mesh(gl);
+  cube.mesh.CreateBuffers(gl, object);
 
   // Initialize a shader program; this is where all the lighting
   // for the vertices and so forth is established.
@@ -416,7 +544,8 @@ function InitWebGl() {
     },
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+        modelMatrix: gl.getUniformLocation(shaderProgram, 'uModelMatrix'),
+        viewMatrix: gl.getUniformLocation(shaderProgram, 'uViewMatrix'),
     }
   };
 
@@ -447,12 +576,70 @@ function update(deltaTime)
   cube.Update(deltaTime);
   //cube2.Update(deltaTime);
   if(Intersects(cube.bb,cube2.bb)){
-    cube.SetVelocity([-0.8,0.0,0.0]);
-  }else{
-    cube.SetVelocity([0.8,0.0,0.0]);
+    //cube.SetVelocity([-0.8,0.0,0.0]);
   }
   //cubeRotation += deltaTime;
   
+
+  cube.cubeRotation += deltaTime;
+  enemy1.Update(deltaTime);
+
+    document.addEventListener('keydown', onKeyDown, false);
+    document.addEventListener('keyup', onKeyUp, false);
+
+  function onKeyDown(event)
+  {
+        switch(event.key)
+        {
+        case 'w':
+        cube.setZVel(-3);
+        break;
+        case 'a':
+        cube.setXVel(-3);
+        break;
+        case 's':
+        cube.setZVel(3);
+        break;
+        case 'd':
+        cube.setXVel(3);
+        break;
+        case ' ':
+        cube.setYPos(cube.getYPos() + 0.001);
+        break;
+        }
+    }
+    ;
+
+    function onKeyUp(event) {
+        switch (event.key) {
+            case 'w':
+                if (cube.getZVel() < 0) {
+                    cube.setZVel(0);
+                }
+                break;
+            case 'a':
+                if (cube.getXVel() < 0) {
+                    cube.setXVel(0);
+                }
+                break;
+            case 's':
+                if (cube.getZVel() > 0) {
+                    cube.setZVel(0);
+                }
+                break;
+            case 'd':
+                if (cube.getXVel() > 0) {
+                    cube.setXVel(0);
+                }
+                break;
+        }
+    }
+    ;
+    //cameraPositionZ += 1 * deltaTime;
+    //if (cameraPositionZ > -1.0) {
+     //   cameraPositionZ = -10.0;
+    //}
+    camera.SetPosition(-cube.getXPos(), -cube.getYPos(), -cube.getZPos() - 10);
 }
 
 //
@@ -468,59 +655,63 @@ function drawScene(gl, programInfo, deltaTime) {
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  // Create a perspective matrix, a special matrix that is
-  // used to simulate the distortion of perspective in a camera.
-  // Our field of view is 45 degrees, with a width/height
-  // ratio that matches the display size of the canvas
-  // and we only want to see objects between 0.1 units
-  // and 100 units away from the camera.
 
-  const fieldOfView = 45 * Math.PI / 180;   // in radians
-  const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-  const zNear = 0.1;
-  const zFar = 100.0;
-  const projectionMatrix = mat4.create();
-
-  // note: glmatrix.js always has the first argument
-  // as the destination to receive the result.
-  mat4.perspective(projectionMatrix,
-                   fieldOfView,
-                   aspect,
-                   zNear,
-                   zFar);
 
   // Set the drawing position to the "identity" point, which is
   // the center of the scene.
-  const modelViewMatrix = mat4.create();
   const modelViewMatrix2 = mat4.create();
   // Now move the drawing position a bit to where we want to
   // start drawing the square.
-    
-  mat4.translate(modelViewMatrix,     // destination matrix
-                 modelViewMatrix,     // matrix to translate
-                 cube.pos);  // amount to translate
-  mat4.rotate(modelViewMatrix,  // destination matrix
-              modelViewMatrix,  // matrix to rotate
-              cubeRotation,     // amount to rotate in radians
-              [0, 0, 1]);       // axis to rotate around (Z)
-  mat4.rotate(modelViewMatrix,  // destination matrix
-              modelViewMatrix,  // matrix to rotate
-              cubeRotation * 0.7,// amount to rotate in radians
-              [0, 1, 0]);       // axis to rotate around (X)
 
-cube.Render(gl, programInfo, projectionMatrix, modelViewMatrix);
   mat4.translate(modelViewMatrix2,     // destination matrix
               modelViewMatrix2,     // matrix to translate
-              cube2.pos);  // amount to translate
+              [cube2.getXPos(), cube2.getYPos(), cube2.getZPos()]);  // amount to translate
   mat4.rotate(modelViewMatrix2,  // destination matrix
               modelViewMatrix2,  // matrix to rotate
-              cubeRotation,     // amount to rotate in radians
+              cube2.getRotation(),     // amount to rotate in radians
               [0, 0, 1]);       // axis to rotate around (Z)
   mat4.rotate(modelViewMatrix2,  // destination matrix
               modelViewMatrix2,  // matrix to rotate
-              cubeRotation * 0.7,// amount to rotate in radians
+              cube.getRotation() * 0.7,// amount to rotate in radians
               [0, 1, 0]);       // axis to rotate around (X)
-cube2.Render(gl, programInfo, projectionMatrix, modelViewMatrix2);
+cube2.Render(gl, programInfo, camera.projectionMatrix, modelViewMatrix2,camera.viewMatrix);
+  const modelMatrix = mat4.create();
+
+  // Now move the drawing position a bit to where we want to
+  // start drawing the square.
+
+  mat4.translate(modelMatrix,     // destination matrix
+                 modelMatrix,     // matrix to translate
+                 [cube.getXPos(), cube.getYPos(), cube.getZPos()]);  // amount to translate
+  mat4.rotate(modelMatrix,  // destination matrix
+              modelMatrix,  // matrix to rotate
+              cube.getRotation(),     // amount to rotate in radians
+              [0, 0, 1]);       // axis to rotate around (Z)
+  mat4.rotate(modelMatrix,  // destination matrix
+              modelMatrix,  // matrix to rotate
+              cube.getRotation() * .7,// amount to rotate in radians
+              [0, 1, 0]);       // axis to rotate around (X)
+
+    cube.Render(gl, programInfo, camera.projectionMatrix, modelMatrix, camera.viewMatrix);
+
+    const enemyModelMatrix = mat4.create();
+
+    // Now move the drawing position a bit to where we want to
+    // start drawing the square.
+
+    mat4.translate(enemyModelMatrix,     // destination matrix
+        enemyModelMatrix,     // matrix to translate
+        [enemy1.getXPos(), enemy1.getYPos(), enemy1.getZPos()]);  // amount to translate
+    mat4.rotate(enemyModelMatrix,  // destination matrix
+        enemyModelMatrix,  // matrix to rotate
+        enemy1.getRotation(),     // amount to rotate in radians
+        [0, 0, 1]);       // axis to rotate around (Z)
+    mat4.rotate(enemyModelMatrix,  // destination matrix
+        enemyModelMatrix,  // matrix to rotate
+        enemy1.getRotation() * .7,// amount to rotate in radians
+        [0, 1, 0]);       // axis to rotate around (X)
+
+    enemy1.Render(gl, programInfo, camera.projectionMatrix, enemyModelMatrix, camera.viewMatrix);
 }
 
 //
