@@ -361,17 +361,15 @@ main();
 // Start here
 //
 
-async function main()
+function main()
 {
-    const response = await fetch('https://webglfundamentals.org/webgl/resources/models/cube/cube.obj');  
-    const text = await response.text();
-
-    InitWebGl(text);
+    InitWebGl();
 }
 
-function InitWebGl(object) {
+async function InitWebGl() {
   const canvas = document.querySelector('#glcanvas');
   const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  const fpsCounter = document.querySelector("#fps");
 
   // If we don't have a GL context, give up now
 
@@ -380,18 +378,21 @@ function InitWebGl(object) {
     return;
   }
 
- const data = parseOBJ(object);
+ //const response = await fetch('http://web.mit.edu/djwendel/www/weblogo/shapes/basic-shapes/sphere/sphere.obj');
+ const response = await fetch('https://webglfundamentals.org/webgl/resources/models/cube/cube.obj');  
+ const text = await response.text();
+ const cubeModel = parseOBJ(text);
 
  camera.OnCreate(gl);
  cube.mesh = new Mesh(gl);
- cube.mesh.CreateBuffers(gl, data);
+ cube.mesh.CreateBuffers(gl, cubeModel);
 
  cube2.mesh = new Mesh(gl);
- cube2.mesh.CreateBuffers(gl, data);
+ cube2.mesh.CreateBuffers(gl, cubeModel);
 
 
     enemy1.mesh = new Mesh(gl);
-    enemy1.mesh.CreateBuffers(gl, data);
+    enemy1.mesh.CreateBuffers(gl, cubeModel);
     enemy1.OnCreate();
 
   // Vertex shader program
@@ -418,11 +419,6 @@ function InitWebGl(object) {
     }
   `;
 
-  
-
-  cube.mesh = new Mesh(gl);
-  cube.mesh.CreateBuffers(gl, data);
-
   // Initialize a shader program; this is where all the lighting
   // for the vertices and so forth is established.
   const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
@@ -448,6 +444,8 @@ function InitWebGl(object) {
   // objects we'll be drawing.
   //const buffers = initBuffers(gl);
 
+  // FPS counter from here: https://stackoverflow.com/questions/47421760/how-to-record-and-display-fps-on-webgl
+
 var then = 0;
   
  // Draw the scene repeatedly
@@ -455,6 +453,8 @@ var then = 0;
     now *= 0.001;  // convert to seconds
     const deltaTime = now - then;
     then = now;
+    const fps = 1 / deltaTime;
+    fpsCounter.textContent = fps.toFixed(1);
 
     drawScene(gl, programInfo, deltaTime);
     update(deltaTime);
