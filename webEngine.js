@@ -348,6 +348,14 @@ class Enemy extends GameObject {
 
 }
 
+var cubes = [];
+var numCubes = 20000 - 3;
+
+for(let i = 0; i < numCubes; i++)
+{
+    cubes[i] = new GameObject(0.0, i, 4.0, -6.0);
+}
+
 var cube = new GameObject(0.0, 4.0, 4.0, -6.0);
 var cube2 = new GameObject(0.0, 0.0, 4.0, -6.0);
 
@@ -371,6 +379,8 @@ async function InitWebGl() {
   const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
   const fpsCounter = document.querySelector("#fps");
 
+  var startTime = Date.now();
+
   // If we don't have a GL context, give up now
 
   if (!gl) {
@@ -384,6 +394,13 @@ async function InitWebGl() {
  const cubeModel = parseOBJ(text);
 
  camera.OnCreate(gl);
+
+ for(let i = 0; i < numCubes; i++)
+ {
+    cubes[i].mesh = new Mesh(gl);
+    cubes[i].mesh.CreateBuffers(gl, cubeModel);
+ }
+
  cube.mesh = new Mesh(gl);
  cube.mesh.CreateBuffers(gl, cubeModel);
 
@@ -440,6 +457,8 @@ async function InitWebGl() {
     }
   };
 
+  console.log((Date.now() - startTime) * 0.001);
+
   // Here's where we call the routine that builds all the
   // objects we'll be drawing.
   //const buffers = initBuffers(gl);
@@ -468,6 +487,12 @@ requestAnimationFrame(gameLoop);
 function update(deltaTime)
 {
   // Update the rotation for the next draw
+
+  for(let i = 0; i < numCubes; i++)
+  {
+    cubes[i].Update(deltaTime);
+  }
+
   cube.Update(deltaTime);
   cube2.Update(deltaTime);
     if (Intersects(cube.bb, cube2.bb)) {
@@ -624,6 +649,23 @@ cube2.Render(gl, programInfo, camera.projectionMatrix, modelViewMatrix2,camera.v
         [0, 1, 0]);       // axis to rotate around (X)
 
     enemy1.Render(gl, programInfo, camera.projectionMatrix, enemyModelMatrix, camera.viewMatrix);
+
+    for(let i = 0; i < numCubes; i++)
+    {
+        const matrices = mat4.create();
+        mat4.translate(matrices,     // destination matrix
+        matrices,     // matrix to translate
+        [cubes[i].getXPos(), cubes[i].getYPos(), cubes[i].getZPos()]);  // amount to translate
+        mat4.rotate(matrices,  // destination matrix
+        matrices,  // matrix to rotate
+        cubes[i].getRotation(),     // amount to rotate in radians
+        [0, 0, 1]);       // axis to rotate around (Z)
+        mat4.rotate(matrices,  // destination matrix
+        matrices,  // matrix to rotate
+        cubes[i].getRotation() * .7,// amount to rotate in radians
+        [0, 1, 0]);       // axis to rotate around (X)
+        cubes[i].Render(gl, programInfo, camera.projectionMatrix, matrices, camera.viewMatrix);
+    }
 }
 
 //
