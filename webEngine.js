@@ -1,6 +1,5 @@
 //Created from the tutorial here:
 //https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial
-
 class Mesh{
 constructor(gl){
 }
@@ -771,3 +770,20 @@ function parseOBJ(text) {
     
 }
 
+class Singleton {
+  constructor() {
+   // ...
+  }
+
+  AddModel() {
+    // ...
+  }
+
+  method2() {
+    // ...
+  }
+}
+
+const singletonInstance = new Singleton();
+
+Object.freeze(singletonInstance);
