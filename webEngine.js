@@ -313,12 +313,6 @@ class Mesh{
       }
     }
     UpdatePlane(object_, planes){
-      // planes.forEach(
-      //   function(object_,planes){
-      //     this.SetPosition(object_, planes);
-      //   }
-      // )
-      //planes = planes.map(this.SetPosition(object_, planes));
       for(var i = 0; i < planes.length; i++){
         this.SetPosition(object_,planes[i]);
       }
