@@ -194,8 +194,9 @@ class Mesh{
   SetPosition(transform_){
     this.transform = transform_;
   }
-  
-  }
+  getMaxVert() { return this.maxVert; }
+  getMinVert() { return this.minVert; }
+}
   function Intersects(a,b){
     var minCornerA = GetTransformedPoint(a.minVert,a.transform);
     var maxCornerA = GetTransformedPoint(a.maxVert,a.transform);
@@ -294,15 +295,15 @@ class Mesh{
       {
         if (planes_[0] != 0.0)
         {
-          console.log(planes_[0]);
           object_.setXPos(-planes_[0] * planes_[3] - planes_[0] * 0.1);
           object_.setYPos(object_.getYPos());
           object_.setZPos(object_.getZPos());
-          console.log("Hitting");
         }else if(planes_[1] != 0.0){
           object_.setXPos(object_.getXPos());
           object_.setYPos(-planes_[1] * planes_[3] - planes_[1] * 0.1);
           object_.setZPos(object_.getZPos());
+          object_.setYVel(0);
+          object_.setYAccel(0);
         }
         else
         {
@@ -335,6 +336,7 @@ class Mesh{
       this.objects.push(object_);
     }
   }
+
   class GameObject{
   
     constructor(cubeRotation_, xPos_, yPos_, zPos_) {
@@ -346,6 +348,9 @@ class Mesh{
         this.xVel = 0.0;
         this.yVel = 0.0;
         this.zVel = 0.0;
+        this.xAccel = 0.0;
+        this.yAccel = 0.0;
+        this.zAccel = 0.0;
       this.bb = new BoundingBox([1,1,1],[-1,-1,-1],[this.xPos,this.yPos,this.zPos]); 
     }
   
@@ -367,19 +372,33 @@ class Mesh{
   
       getZVel() { return this.zVel; }
       setZVel(zVel_) { this.zVel = zVel_; }
+
+      getXAccel() { return this.xAccel; }
+      setXAccel(xAccel_) { this.xAccel = xAccel_; }
+  
+      getYAccel() { return this.yAccel; }
+      setYAccel(zAccel_) { this.yAccel = zAccel_; }
+  
+      getZAccel() { return this.zAccel; }
+      setZAccel(zAccel_) { this.zAccel = zAccel_; }
   
     getRotation() { return this.cubeRotation; }
     setRotation(rotation_) { cubeRotation = rotation_; }
   
     Update(deltaTime)
     {
-        this.xPos += this.xVel * deltaTime;
-        this.yPos += this.yVel * deltaTime;
-        this.zPos += this.zVel * deltaTime;
+        this.xPos += this.xVel * deltaTime + 0.5 * this.xAccel* deltaTime * deltaTime;   
+        this.yPos += this.yVel * deltaTime + 0.5 * this.yAccel* deltaTime * deltaTime;
+        this.zPos += this.zVel * deltaTime + 0.5 * this.zAccel* deltaTime * deltaTime;
+
+        this.xVel = this.xVel + this.xAccel * deltaTime;
+        this.yVel = this.yVel + this.yAccel * deltaTime;
+        this.zVel = this.zVel + this.zAccel * deltaTime;
+
         this.bb.SetPosition([this.xPos,this.yPos,this.zPos]);
       if(this.yPos > 0.0)
       {
-          this.yPos -= 0.1;
+          this.yAccel -= 1.0
       }
     }
     Render(gl, programInfo, projectionMatrix , modelMatrix, viewMatrix)
@@ -389,7 +408,17 @@ class Mesh{
   }
   
   var cubeRotation = 0.0;
-  
+  class Platform extends GameObject{
+    OnCreate(){
+
+    }
+    
+    Update(deltaTime)
+    {
+      super.Update(deltaTime);
+    }
+  }
+
   
   class Enemy extends GameObject {
   
@@ -409,29 +438,38 @@ class Mesh{
   }
   
   var cubes = [];
-  var numCubes = 20 - 3;
+  var numCubes = 0 - 3;
   
   for(let i = 0; i < numCubes; i++)
   {
       cubes[i] = new GameObject(0.0, i, 4.0, -6.0);
   }
-  
-  var cube = new GameObject(0.0, 4.0, 4.0, -6.0);
-  var cube2 = new GameObject(0.0, 0.0, 4.0, -6.0);
+  var platforms = [];
+  var numOfPlatformsCollumn = 5;
+  var numOfPlatformsRow = 5;
+
+  for(let i = 0; i < numOfPlatformsRow; i++)
+  {
+    for(let j = 0; j < numOfPlatformsCollumn; j++){
+      platforms.push(new Platform(0.0, i, 4.0, -j));
+    }
+  }
+
+  var cube = new GameObject(0.0, 4.0, 0.0, -6.0);
+  var cube2 = new GameObject(0.0, 0.0, 0.0, -6.0);
+  //var platform = new Platform(0.0, -4.0, 2.0, -6.0);
   var environmentCollision =  new EnvironmentalCollisionManager();
-  var plane1 = [-1.0, 0.0, 0.0, 5.0];
-  var plane2 = [1.0, 0.0, 0.0, 5.0];
-  var plane3 = [0.0, 0.0, 1.0, 5.0];
-  var plane4 = [0.0, 0.0, -1.0, 5.0];
-  var plane5 = [0.0, 1.0, 0.0, 10.0];
-  var plane6 = [0.0, -1.0, 0.0, 0.0];
+  var plane1 = [-1.0, 0.0, 0.0, 8.0];
+  var plane2 = [1.0, 0.0, 0.0, 8.0];
+  var plane3 = [0.0, 0.0, 1.0, 8.0];
+  var plane4 = [0.0, 0.0, -1.0, 8.0];
+  var plane5 = [0.0, 1.0, 0.0, 1.0];
   var planes = [];
   planes[0] = plane1;
   planes[1] = plane2;
   planes[2] = plane3;
   planes[3] = plane4;
   planes[4] = plane5;
-  planes[5] = plane6;
   var enemy1 = new Enemy(0.0, 4.0, 4.0, -6.0);
   var camera = new Camera();
   var cameraPositionZ = -10.0;
@@ -480,8 +518,11 @@ class Mesh{
   
    cube2.mesh = new Mesh(gl);
    cube2.mesh.CreateBuffers(gl, cubeModel);
-  
-
+   for(let i = 0; i < platforms.length; i++)
+   {
+    platforms[i].mesh = new Mesh(gl);
+    platforms[i].mesh.CreateBuffers(gl, cubeModel);
+   }
 
       enemy1.mesh = new Mesh(gl);
       enemy1.mesh.CreateBuffers(gl, cubeModel);
@@ -567,21 +608,13 @@ class Mesh{
     {
       cubes[i].Update(deltaTime);
     }
-  
+
     cube.Update(deltaTime);
     cube2.Update(deltaTime);
     environmentCollision.UpdatePlane(cube,planes);
-    
+    environmentCollision.UpdatePlane(cube2,planes);
       if (Intersects(cube.bb, cube2.bb)) {
-         /* var xDif = cube.xPos - cube2.xPos;
-          var yDif = cube.yPos - cube2.yPos;
-          var zDif = cube.zPos - cube2.zPos;
-  
-  
-          cube2.setXVel(-xDif);
-          cube2.setYVel(-yDif);
-          cube2.setZVel(-zDif);
-          */
+
   
           cube2.setXVel(cube.xVel);
           cube2.setYVel(cube.yVel);
@@ -592,12 +625,29 @@ class Mesh{
           cube2.setYVel(0);
           cube2.setZVel(0);
       }
+
+      for(let i = 0; i < platforms.length; i++)
+      {
+        platforms[i].Update(deltaTime);
+        environmentCollision.UpdatePlane(platforms[i],planes);
+        if (Intersects(cube.bb, platforms[i].bb)) {
+          if(cube.getYPos() > platforms[i].getYPos() + platforms[i].bb.getMinVert()[1]){
+            cube.setYVel(0);
+            cube.setYPos(platforms[i].getYPos() + platforms[i].bb.getMaxVert()[1] * 2);
+          }
+        }
+      }
+    // else {
+    //     cube2.setXVel(0);
+    //     cube2.setYVel(0);
+    //     cube2.setZVel(0);
+    // }
     //cubeRotation += deltaTime;
     
   
     //cube.cubeRotation += deltaTime;
     enemy1.Update(deltaTime);
-  
+  environmentCollision.UpdatePlane(enemy1,planes);
       document.addEventListener('keydown', onKeyDown, false);
       document.addEventListener('keyup', onKeyUp, false);
   
@@ -606,19 +656,19 @@ class Mesh{
           switch(event.key)
           {
           case 'w':
-          cube.setZVel(-3);
+          cube.setZVel(-5);
           break;
           case 'a':
-          cube.setXVel(-3);
+          cube.setXVel(-5);
           break;
           case 's':
-          cube.setZVel(3);
+          cube.setZVel(5);
           break;
           case 'd':
-          cube.setXVel(3);
+          cube.setXVel(5);
           break;
           case ' ':
-          cube.setYPos(cube.getYPos() + 0.001);
+          cube.setYVel(10);
           break;
           }
       }
@@ -689,8 +739,10 @@ class Mesh{
                 cube2.getRotation() * 0.0,// amount to rotate in radians
                 [0, 1, 0]);       // axis to rotate around (X)
   cube2.Render(gl, programInfo, camera.projectionMatrix, modelViewMatrix2,camera.viewMatrix);
-    const modelMatrix = mat4.create();
-  
+
+
+    
+  const modelMatrix = mat4.create();
     // Now move the drawing position a bit to where we want to
     // start drawing the square.
   
@@ -726,7 +778,22 @@ class Mesh{
           [0, 1, 0]);       // axis to rotate around (X)
   
       enemy1.Render(gl, programInfo, camera.projectionMatrix, enemyModelMatrix, camera.viewMatrix);
-  
+          for(let i = 0; i < platforms.length; i++)
+          {
+              const platformModelMatrix = mat4.create();
+              mat4.translate(platformModelMatrix,     // destination matrix
+              platformModelMatrix,     // matrix to translate
+              [platforms[i].getXPos(), platforms[i].getYPos(), platforms[i].getZPos()]);  // amount to translate
+              mat4.rotate(platformModelMatrix,  // destination matrix
+              platformModelMatrix,  // matrix to rotate
+              platforms[i].getRotation(),     // amount to rotate in radians
+              [0, 0, 1]);       // axis to rotate around (Z)
+              mat4.rotate(platformModelMatrix,  // destination matrix
+              platformModelMatrix,  // matrix to rotate
+              platforms[i].getRotation() * .7,// amount to rotate in radians
+              [0, 1, 0]);       // axis to rotate around (X)
+              platforms[i].Render(gl, programInfo, camera.projectionMatrix, platformModelMatrix, camera.viewMatrix);
+          }
       for(let i = 0; i < numCubes; i++)
       {
           const matrices = mat4.create();
