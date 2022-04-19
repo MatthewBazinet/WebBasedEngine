@@ -444,6 +444,14 @@ class Mesh{
   {
       cubes[i] = new GameObject(0.0, i, 4.0, -6.0);
   }
+
+var enemies = [];
+var numEnemies = 3;
+
+for (let i = 0; i < numEnemies; i++) {
+    enemies[i] = new Enemy(0.0, i, 4.0, -6.0);
+}
+
   var platforms = [];
   var numOfPlatformsCollumn = 5;
   var numOfPlatformsRow = 5;
@@ -512,6 +520,11 @@ class Mesh{
       cubes[i].mesh = new Mesh(gl);
       cubes[i].mesh.CreateBuffers(gl, cubeModel);
    }
+
+      for (let i = 0; i < numEnemies; i++) {
+          enemies[i].mesh = new Mesh(gl);
+          enemies[i].mesh.CreateBuffers(gl, cubeModel);
+      }
   
    cube.mesh = new Mesh(gl);
    cube.mesh.CreateBuffers(gl, cubeModel);
@@ -636,6 +649,15 @@ class Mesh{
             cube.setYPos(platforms[i].getYPos() + platforms[i].bb.getMaxVert()[1] * 2);
           }
         }
+      }
+
+      for (let i = 0; i < enemies.length; i++) {
+          
+          enemies[i].Update(deltaTime);
+          environmentCollision.UpdatePlane(enemies[i], planes);
+          if (Intersects(cube.bb, enemies[i].bb)) {
+              //damage player
+          }
       }
     // else {
     //     cube2.setXVel(0);
@@ -778,6 +800,22 @@ class Mesh{
           [0, 1, 0]);       // axis to rotate around (X)
   
       enemy1.Render(gl, programInfo, camera.projectionMatrix, enemyModelMatrix, camera.viewMatrix);
+
+      for (let i = 0; i < enemies.length; i++) {
+          const enemiesModelMatrix = mat4.create();
+          mat4.translate(enemiesModelMatrix,     // destination matrix
+              enemiesModelMatrix,     // matrix to translate
+              [enemies[i].getXPos(), enemies[i].getYPos(), enemies[i].getZPos()]);  // amount to translate
+          mat4.rotate(enemiesModelMatrix,  // destination matrix
+              enemiesModelMatrix,  // matrix to rotate
+              enemies[i].getRotation(),     // amount to rotate in radians
+              [0, 0, 1]);       // axis to rotate around (Z)
+          mat4.rotate(enemiesModelMatrix,  // destination matrix
+              enemiesModelMatrix,  // matrix to rotate
+              enemies[i].getRotation() * .7,// amount to rotate in radians
+              [0, 1, 0]);       // axis to rotate around (X)
+          enemies[i].Render(gl, programInfo, camera.projectionMatrix, enemiesModelMatrix, camera.viewMatrix);
+      }
           for(let i = 0; i < platforms.length; i++)
           {
               const platformModelMatrix = mat4.create();
